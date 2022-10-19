@@ -9,7 +9,7 @@ let port=process.env.PORT || 9800;
 let cors = require('cors');
 let mongo = require('mongodb');
 let MongoClient = mongo.MongoClient;
-let mongoUrl = "mongodb+srv://arjoo:arjoo123@cluster0.zwlfftc.mongodb.net/amazonsite?retryWrites=true&w=majority"
+let mongoUrl = process.env.MongoLocal;
 let bodyParser = require('body-parser')
 let db;
 
@@ -28,33 +28,22 @@ app.get('/', (req, res) => {
 //http://localhost:2500/category--my api
 
 // https://app2fkartapi.herokuapp.com/list-apis
-app.get('/category', (req, res) => {
-    db.listCollections().toArray((err, collInfo) => {
-        if (err) throw err;
+// app.get('/category', (req, res) => {
+//     db.listCollections().toArray((err, collInfo) => {
+//         if (err) throw err;
 
-        let arr = []
-        for (c of collInfo)  
-            arr.push(c.name);
+//         let arr = []
+//         for (c of collInfo)  
+//             arr.push(c.name);
 
-        res.send(arr);
-    });
-});
+//         res.send(arr);
+//     });
+// });
 
-//category details
-app.get('/details/:id',(req,res) => {
-    //let id = mongo.ObjectId(req.params.id)
-    let id = Number(req.params.id)
-    db.collection('category').find({category_id:id}).toArray((err,result) =>{
-        if(err) throw err;
-        res.send(result)
-    })
-})
-
+//
 
 // api to get all items of any category 
-//http://localhost:2500/category/gifts---my api
-// http://localhost:9200/api/shirts
-// https://app2fkartapi.herokuapp.com/api/shirts
+//http://localhost:2500/category/gifts
 app.get('/category/:categoryName', (req, res) => {
     let categoryName = req.params.categoryName;
     db.collection(categoryName).find().toArray((err, result) => {
@@ -63,15 +52,31 @@ app.get('/category/:categoryName', (req, res) => {
     });
 })
 
-// NOTE: /item, /filters return first 12 items by default
+//api to get items from subcategory(electronics)
 
-// api for search bar (returns 12 items by default)
-//http://localhost:2500/item/tv---my api
-//http://localhost:2500/item/tv?itemId=2--myapi
-// http://localhost:9200/item/clothes
-// http://localhost:9200/item/clothes?itemId=12
-// https://app2fkartapi.herokuapp.com/item/clothes
-// https://app2fkartapi.herokuapp.com/item/clothes?itemId=12
+app.get('/electronics/:id',(req,res) => {
+    let id = Number(req.params.id)
+    db.collection('electronics').find({subcategory_id:id}).toArray((err,result) =>{
+        if(err) throw err;
+        res.send(result)
+    })
+})
+
+//api to get items from subcategory(clothes)
+
+app.get('/clothes/:id',(req,res) => {
+    let id = Number(req.params.id)
+    db.collection('clothes').find({subcategory_id:id}).toArray((err,result) =>{
+        if(err) throw err;
+        res.send(result)
+    })
+})
+
+
+
+//Details for particular item
+//http://localhost:2500/item/clothes?itemId=20
+
 app.get('/item/:itemName', (req, res) => {
     let itemName = req.params.itemName;
     let itemId = req.query.itemId;
@@ -85,14 +90,10 @@ app.get('/item/:itemName', (req, res) => {
     });
 });
 
-// api for details page, clicking on popularity will send item type to js/db 
-// filter by popularity
 
-//http://localhost:2500/filter/stars/gifts--my api
-// http://localhost:9200/filter/popularity/mouses
-// http://localhost:9200/filter/popularity/refrigerators
-// https://app2fkartapi.herokuapp.com/filter/popularity/mouses
-// https://app2fkartapi.herokuapp.com/filter/popularity/refrigerators
+// filter by popularity(top rated items)
+//http://localhost:2500/filter/stars/gifts
+
 app.get('/filter/stars/:item', (req, res) => {
     let itemName = req.params.item;
     let query = {stars:{$gt: 4}};
@@ -109,12 +110,7 @@ app.get('/filter/stars/:item', (req, res) => {
 //http://localhost:2500/filter/price/mensclothing(low to high)---my api
 //http://localhost:2500/filter/price/mensclothing?sort=-1(high to low)--my api
 //http://localhost:2500/filter/price/tv?lcost=10000&hcost15000--my api
-// http://localhost:9200/filter/price/bags
-// http://localhost:9200/filter/price/bags?sort=-1
-// https://app2fkartapi.herokuapp.com/filter/price/bags
-// https://app2fkartapi.herokuapp.com/filter/price/bags?sort=-1
-// https://app2fkartapi.herokuapp.com/filter/price/bags?lcost=50&hcost=1000
-// https://app2fkartapi.herokuapp.com/filter/price/bags?sort=-1&lcost=50&hcost=1000
+
 app.get('/filter/price/:item', (req, res) => {
     let itemName = req.params.item;
 
@@ -142,15 +138,12 @@ app.get('/filter/price/:item', (req, res) => {
 })
 
 
-// filter by newest first
-//http://localhost:2500/filter/new/appliances--my api
-// http://localhost:9200/filter/new/bags
-// http://localhost:9200/filter/new/keyboards
-// https://app2fkartapi.herokuapp.com/filter/new/bags
-// https://app2fkartapi.herokuapp.com/filter/new/keyboards
+// filter by newest first(stars greater than 4 are newest)
+//http://localhost:2500/filter/new/gifts--my api
+
 app.get('/filter/new/:item', (req, res) => {
     let itemName = req.params.item;
-    let query = { $and:[{stars: {$lt:4.2 , $gt: 3.5}}] };       // my criteria defining 'what is new data'
+    let query = { $and:[{stars: {$lt:5 , $gt: 4}}] };       
 
     db.collection(itemName).find(query).toArray((err, result) => {
         if (err) throw err;
@@ -159,10 +152,8 @@ app.get('/filter/new/:item', (req, res) => {
 });
 
 // filter by discount
-//http://localhost:2500/filter/discount/appliances/50--my api
-// http://localhost:9200/filter/discount/mouses/70
-// http://localhost:9200/filter/discount/powerbanks/50
-// https://app2fkartapi.herokuapp.com/filter/discount/powerbanks/50
+//http://localhost:2500/filter/discount/electronics/50--my api
+
 app.get('/filter/discount/:item/:discount', (req, res) => {
     let itemName = req.params.item;
     let discount = req.params.discount;
@@ -174,23 +165,8 @@ app.get('/filter/discount/:item/:discount', (req, res) => {
     });
 });
 
-// filter by special-price (offers)
-// http://localhost:9200/filter/offers/mouses
-// https://app2fkartapi.herokuapp.com/filter/offers/mouses
-app.get('/filter/offers/:item', (req, res) => {
-    let itemName = req.params.item;
-    let sort_order = {discount: -1}     // max discount first (i.e. less cost items) : offer!
-
-    db.collection(itemName).find().sort(sort_order).toArray((err, result) => {
-        if (err) throw err;
-        res.send(result);
-    });
-});
-
 
 //place order
-
-
 app.post('/placeOrder',(req,res) => {
     console.log(req.body);
     db.collection('orders').insert(req.body,(err,result) => {
@@ -215,6 +191,7 @@ app.get('/orders',(req,res) => {
     })
 })
 
+//updateOrder by id
 app.put('/updateOrder/:id',(req,res) => {
     let oid = Number(req.params.id);
     db.collection('orders').updateOne(
@@ -232,6 +209,7 @@ app.put('/updateOrder/:id',(req,res) => {
     )
 })
 
+//API for deleting order by Id
 app.delete('/deleteOrder/:id',(req,res) => {
     let _id = mongo.ObjectId(req.params.id);
     db.collection('orders').deleteOne({_id},(err,result) => {
